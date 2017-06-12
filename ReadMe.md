@@ -4,8 +4,10 @@
 
 Linux l2tp over ipsec with static keys, requires no additions daemons installed except linux kernel 3+ 
 
+```
 LOCAL/REMOTE - ipv4/ipv6 addresses 
 LPORT/RPORT - ports used for incoming / outgoing udp-traffic encapsulating l2tp session 
+```
 
 Keys can be generated using
 ```
