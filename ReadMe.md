@@ -61,7 +61,7 @@ Preparations:
 
 ```
 apt-get update 
-apt-get install bridge-utils uuid lxc lxc-dev dnsmasq 
+apt-get install bridge-utils uuid lxc lxctl dnsmasq 
 ```
 
 Tying all together: 
