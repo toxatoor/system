@@ -1,0 +1,6 @@
+auto inside0
+iface inside0 inet static
+  bridge_ports none
+  address 10.0.0.1
+  broadcast 10.0.0.255
+  netmask 255.255.255.0

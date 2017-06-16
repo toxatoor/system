@@ -1,0 +1,11 @@
+lxc.network.type = veth
+lxc.network.flags = up
+lxc.network.name = eth0
+lxc.network.link = inside0
+
+lxc.autodev = 1
+lxc.kmsg = 0
+lxc.start.auto = 1
+
+lxc.pts = 1024
+lxc.tty = 1

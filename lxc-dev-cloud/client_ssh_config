@@ -1,0 +1,5 @@
+Host 9.8.7.6
+  User root
+
+Host *.dev.cloud
+  ProxyCommand ssh -W %h:%p -l root 9.8.7.6
