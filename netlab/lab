@@ -1,0 +1,124 @@
+#!/bin/bash
+
+management_network="172.30.1."
+
+topology="$(dot -Tplain network.dot)"
+
+units=$(echo "$topology" | grep ^node | grep "rect black black" | cut -d ' ' -f 2 )
+bridges=$(echo "$topology" | grep ^edge | cut -d ' ' -f 2 | sort | uniq ) 
+
+
+
+case $1 in
+
+  prep) 
+    echo "Installing basic packages: frr, lldpd, graphviz, libgraph-easy-perl"
+    ;; 
+
+  start) 
+    for br in $bridges
+    do 
+      brctl addbr $br 
+      ip link set dev $br up 
+      echo 16384 > /sys/devices/virtual/net/$br/bridge/group_fwd_mask
+    done
+
+    for unit in $units 
+    do 
+      mkdir /var/lib/lxc/$unit 
+      netidx=0 
+      for links in $(echo "$topology" | grep ^edge | grep $unit | cut -d ' ' -f 2 | sort | uniq ) 
+      do 
+      cat >> /var/lib/lxc/$unit/config <<EOF
+lxc.network.$netidx.type = veth
+lxc.network.$netidx.flags = up
+lxc.network.$netidx.link = $links
+lxc.network.$netidx.name = $links
+         
+EOF
+      netidx=$(($netidx + 1))
+    
+      done 
+
+      cat >> /var/lib/lxc/$unit/config <<EOF
+lxc.rootfs = /var/lib/lxc/$unit/rootfs
+lxc.rootfs.backend = dir
+lxc.utsname = $unit
+lxc.pts = 1024
+lxc.cap.drop = sys_module mac_admin mac_override sys_time
+
+
+lxc.mount.entry = /dev dev none ro,bind 0 0
+lxc.mount.entry = /lib lib none ro,bind 0 0
+lxc.mount.entry = /bin bin none ro,bind 0 0
+lxc.mount.entry = /usr usr none ro,bind 0 0
+lxc.mount.entry = /sbin sbin none ro,bind 0 0
+lxc.mount.entry = /etc/alternatives etc/alternatives none ro,bind 0 0
+lxc.mount.entry = /etc/pam.d etc/pam.d none ro,bind 0 0
+
+lxc.mount.auto = cgroup:mixed proc:mixed sys:mixed
+lxc.mount.entry = /lib64 lib64 none ro,bind 0 0
+
+lxc.start.auto = 1
+EOF
+
+	tar -zxf rootfs.tgz -C /var/lib/lxc/$unit/ 
+
+        echo "127.0.0.1 localhost" > /var/lib/lxc/$unit/rootfs/etc/hosts 
+        ip=1
+        for host in $units 
+        do 
+           echo "$management_network$ip $host" >> /var/lib/lxc/$unit/rootfs/etc/hosts
+           ip=$(($ip+1))
+        done
+
+        cat > /var/lib/lxc/$unit/rootfs/etc/frr/frr.conf <<EOF
+frr version 7.1
+frr defaults traditional
+hostname $unit
+log syslog informational
+no ipv6 forwarding
+service integrated-vtysh-config
+!
+interface management
+ ip address $(cat /var/lib/lxc/$unit/rootfs/etc/hosts | grep $unit | cut -d ' ' -f 1 )/24 
+!
+line vty
+!
+EOF
+
+        lxc-start -n $unit 
+    done 
+    
+    graph-easy --as=boxart network.dot
+    
+    lxc-ls -f 
+   
+#    read -n 1 -s -r -p "Press any key to continue"
+ 
+    ;;
+
+  stop) 
+
+    for unit in $units 
+    do 
+      lxc-stop -k -n $unit 
+      rm -rf /var/lib/lxc/$unit 
+    done
+
+    for br in $bridges
+    do 
+      ip link set dev $br down 
+      brctl delbr $br 
+    done
+
+    lxc-ls -f 
+ 
+    ;;
+
+  graph) 
+
+    dot -Tsvg -o network.svg network.dot 
+    ;;
+
+esac

@@ -1,0 +1,18 @@
+graph topology {
+
+# units
+node [shape=rect color=black rank=max ]
+
+router01 ;
+router02 ;
+server01 ; 
+server02 ; 
+server03 
+
+# networks
+node [shape=box color=red rank=min]
+
+management -- { router01 router02 }
+service    -- { router01 router02 server01 server02 server03 }
+
+}

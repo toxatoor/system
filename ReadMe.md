@@ -114,3 +114,126 @@ Disadvantages:
 
 
  
+## netlab
+
+lxc-based lightweight environment for modelling networks with complex routing scheme. Host system is debian 9, should also run under other distros (not tested as for now). 
+
+Mandatory requirements: 
+ - lxc 
+ - bridge-utils
+ - graphviz 
+ - frr 
+
+Optional requirements: 
+ - lldpd 
+ - libgraph-easy-perl
+ - tmux 
+
+Required packages should be installed into host system, containers inherrit software from host root fs. 
+By default, frr is ruinning with only BGP enabled. 
+  
+Usage: 
+network.dot graph describes desired topology. `lab` script creates/destroys environment according to described one in network.dot: 
+
+```
+# ./lab start
+                      ┌────────────┐
+  ┌────────────────── │ management │
+  │                   └────────────┘
+  │                     │
+  │                     │
+  │                     │
+  │                   ┌────────────┐
+  │                   │  router01  │
+  │                   └────────────┘
+  │                     │
+  │                     │
+  │                     │
+  │  ┌──────────┐     ┌────────────────────────┐     ┌──────────┐
+  │  │ server02 │ ─── │        service         │ ─── │ server03 │
+  │  └──────────┘     └────────────────────────┘     └──────────┘
+  │                     │             │
+  │                     │             │
+  │                     │             │
+  │                   ┌────────────┐┌──────────┐
+  └────────────────── │  router02  ││ server01 │
+                      └────────────┘└──────────┘
+NAME     STATE   AUTOSTART GROUPS IPV4 IPV6
+router01 RUNNING 1         -      -    -
+router02 RUNNING 1         -      -    -
+server01 RUNNING 1         -      -    -
+server02 RUNNING 1         -      -    -
+server03 RUNNING 1         -      -    -
+
+# lxc-attach -n router01
+root@router01 / # lldpctl 
+-------------------------------------------------------------------------------
+LLDP neighbors:
+-------------------------------------------------------------------------------
+Interface:    management, via: LLDP, RID: 1, Time: 0 day, 00:02:10
+  Chassis:
+    ChassisID:    mac 6e:76:46:48:03:41
+    SysName:      router02
+    SysDescr:     Debian GNU/Linux 9 (stretch) Linux 4.9.0-6-amd64 #1 SMP Debian 4.9.82-1+deb9u3 (2018-03-02) x86_64
+    TTL:          15
+    MgmtIP:       172.30.1.2
+    MgmtIP:       fe80::6c76:46ff:fe48:341
+    Capability:   Bridge, off
+    Capability:   Router, on
+    Capability:   Wlan, off
+    Capability:   Station, on
+  Port:
+    PortID:       mac 6e:76:46:48:03:41
+    PortDescr:    management
+    PMD autoneg:  supported: no, enabled: no
+      MAU oper type: 10GigBaseCX4 - X copper over 8 pair 100-Ohm balanced cable
+-------------------------------------------------------------------------------
+Interface:    service, via: LLDP, RID: 1, Time: 0 day, 00:02:10
+  Chassis:
+    ChassisID:    mac 6e:76:46:48:03:41
+    SysName:      router02
+    SysDescr:     Debian GNU/Linux 9 (stretch) Linux 4.9.0-6-amd64 #1 SMP Debian 4.9.82-1+deb9u3 (2018-03-02) x86_64
+    TTL:          15
+    MgmtIP:       172.30.1.2
+    MgmtIP:       fe80::6c76:46ff:fe48:341
+    Capability:   Bridge, off
+    Capability:   Router, on
+    Capability:   Wlan, off
+    Capability:   Station, on
+  Port:
+    PortID:       mac 1a:24:9e:36:55:b1
+    PortDescr:    service
+    PMD autoneg:  supported: no, enabled: no
+      MAU oper type: 10GigBaseCX4 - X copper over 8 pair 100-Ohm balanced cable
+-------------------------------------------------------------------------------
+[ ... ] 
+
+root@router01 / # vtysh
+
+Hello, this is FRRouting (version 7.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+router01# sh run
+Building configuration...
+
+Current configuration:
+!
+frr version 7.1
+frr defaults traditional
+hostname router01
+log syslog informational
+no ipv6 forwarding
+service integrated-vtysh-config
+!
+interface management
+ ip address 172.30.1.1/24
+!
+line vty
+!
+end
+router01# exit
+root@router01 / # exit
+ # ./lab stop
+NAME     STATE   AUTOSTART GROUPS IPV4 IPV6
+#
+```
